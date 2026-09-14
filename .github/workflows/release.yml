@@ -1,10 +1,4 @@
-name: Release
-
-# Builds an Apple-silicon macOS DMG and publishes it to a GitHub Release.
-#
-# Run it either way:
-#   • Actions tab → "Release" → Run workflow  (creates a tag from package.json)
-#   • or push a tag:  git tag v0.1.0 && git push origin v0.1.0
+name: Release desktop applications
 
 on:
   workflow_dispatch:
@@ -18,71 +12,132 @@ on:
         required: false
         default: false
         type: boolean
+      skip_macos:
+        description: 'Keep existing macOS assets when extending a release'
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
 
-# One release run at a time per ref; cancel superseded runs.
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
-  contents: write # required to create the tag and release
+  contents: write
 
 jobs:
-  build:
-    name: Build macOS (Apple silicon)
+  build-macos:
+    name: Build macOS (Apple silicon + Intel)
+    if: ${{ github.event_name == 'push' || !inputs.skip_macos }}
     runs-on: macos-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build installer
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build macOS packages
         run: npm run build:mac
         env:
-          # Open-source builds are unsigned — don't let electron-builder hunt
-          # for a signing identity (it would hang or fail on CI).
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload installer artifact
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
         with:
-          name: installer-macos
+          name: installers-macos
           path: |
             dist/*.dmg
+            dist/*-mac.zip
             dist/*.dmg.blockmap
-            dist/latest*.yml
+            dist/latest-mac.yml
           if-no-files-found: error
           retention-days: 14
 
-  release:
-    name: Publish release
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  build-windows:
+    name: Build Windows (x64)
+    runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download all installers
-        uses: actions/download-artifact@v8
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          pattern: installer-*
-          path: artifacts
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build Windows packages
+        run: npm run build:win -- --x64
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-windows-x64
+          path: |
+            dist/*.exe
+            dist/*-win.zip
+            dist/*.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+          retention-days: 14
 
+  build-linux-x64:
+    name: Build Linux (x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build Linux x64 packages
+        run: npm run build && npx electron-builder --linux AppImage deb --x64 --publish never
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-linux-x64
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest-linux.yml
+          if-no-files-found: error
+          retention-days: 14
+
+  build-linux-arm64:
+    name: Build Linux (ARM64)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build Linux ARM64 AppImage
+        run: npm run build && npx electron-builder --linux AppImage --arm64 --publish never
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-linux-arm64
+          path: |
+            dist/*.AppImage
+            dist/latest-linux*.yml
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    if: ${{ always() && needs.build-windows.result == 'success' && needs.build-linux-x64.result == 'success' && needs.build-linux-arm64.result == 'success' && (needs.build-macos.result == 'success' || needs.build-macos.result == 'skipped') }}
+    needs: [build-macos, build-windows, build-linux-x64, build-linux-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: installers-*
+          path: artifacts
       - name: Resolve release tag
         id: meta
         shell: bash
@@ -95,45 +150,18 @@ jobs:
           else
             TAG="v${VERSION}"
           fi
-          DATE_STR="$(node -e "
-            const now = new Date();
-            const day = now.getUTCDate();
-            const s = ['th','st','nd','rd'];
-            const v = day % 100;
-            const ord = s[(v - 20) % 10] || s[v] || s[0];
-            const month = now.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
-            console.log(\`\${month} \${day}\${ord}, \${now.getUTCFullYear()}\`);
-          ")"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "date=${DATE_STR}" >> "$GITHUB_OUTPUT"
-          echo "Releasing ${TAG} (${DATE_STR})"
-
-      - name: List downloaded files
+      - name: Create or update release and upload packages
         shell: bash
-        run: find artifacts -type f -print
-
-      - name: Create release and attach installers
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: ${{ steps.meta.outputs.tag }} (${{ steps.meta.outputs.date }})
-          draft: false
-          prerelease: ${{ inputs.prerelease || false }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            artifacts/**/*.dmg
-            artifacts/**/*.blockmap
-            artifacts/**/*.yml
-          body: |
-            Apple-silicon macOS installer for **OffsetDock**.
-
-            | Platform | Download |
-            |----------|----------|
-            | macOS (Apple silicon) | `OffsetDock-*-arm64.dmg` |
-
-            > This build is **unsigned and not notarized**. macOS may require
-            > right-click → Open on first launch.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease || false }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            FLAGS=(--title "OffsetDock ${TAG#v}" --notes-file RELEASE_NOTES.md)
+            if [ "$PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
+            gh release create "$TAG" "${FLAGS[@]}"
+          fi
+          find artifacts -type f -print0 | xargs -0 gh release upload "$TAG" --clobber
+          gh release edit "$TAG" --notes-file RELEASE_NOTES.md --latest

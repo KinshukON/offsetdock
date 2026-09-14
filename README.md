@@ -58,8 +58,12 @@ Grab the latest installer from the [**Releases**](../../releases) page:
 |----------|------|
 | macOS (Apple silicon) | `OffsetDock-*-arm64.dmg` |
 | macOS (Intel) | `OffsetDock-*-x64.dmg` |
+| Windows (x64 installer) | `OffsetDock-Setup-*.exe` |
+| Windows (x64 portable) | `OffsetDock-*.exe` |
+| Linux (x64) | `OffsetDock-*.AppImage` or `*.deb` |
+| Linux (ARM64) | `OffsetDock-*.AppImage` |
 
-Builds are **unsigned** — on macOS, if Gatekeeper flags the app as "damaged" or "broken", clear the quarantine flag and apply an ad-hoc signature:
+Builds are **unsigned**. On macOS, if Gatekeeper flags the app as "damaged" or "broken", clear the quarantine flag and apply an ad-hoc signature:
 
 ```bash
 # 1. Remove Gatekeeper quarantine attribute
