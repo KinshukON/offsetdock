@@ -14,4 +14,4 @@ The first public macOS release of OffsetDock, a local-first Kafka operations coc
 
 ## macOS installation
 
-This Apple silicon build is currently unsigned and not notarized. After copying OffsetDock to Applications, Control-click the app and choose **Open** on first launch.
+Apple silicon and Intel builds are available. Both are currently unsigned and not notarized. After copying OffsetDock to Applications, Control-click the app and choose **Open** on first launch.

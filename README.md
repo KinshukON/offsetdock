@@ -57,6 +57,7 @@ Grab the latest installer from the [**Releases**](../../releases) page:
 | Platform | File |
 |----------|------|
 | macOS (Apple silicon) | `OffsetDock-*-arm64.dmg` |
+| macOS (Intel) | `OffsetDock-*-x64.dmg` |
 
 Builds are **unsigned** — on macOS, if Gatekeeper flags the app as "damaged" or "broken", clear the quarantine flag and apply an ad-hoc signature:
 
@@ -64,7 +65,7 @@ Builds are **unsigned** — on macOS, if Gatekeeper flags the app as "damaged" o
 # 1. Remove Gatekeeper quarantine attribute
 sudo xattr -rd com.apple.quarantine "/Applications/OffsetDock.app"
 
-# 2. Apply ad-hoc code signature (required for Apple Silicon M1/M2/M3/M4)
+# 2. Apply an ad-hoc code signature
 codesign --force --deep --sign - "/Applications/OffsetDock.app"
 ```
 
