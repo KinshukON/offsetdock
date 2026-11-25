@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useStore } from '../state/store'
+import GroupObservability from './GroupObservability'
 
 function lagClass(lag: string): string {
-  const n = BigInt(lag)
+  const n = /^-?\d+$/.test(lag) ? BigInt(lag) : 0n
   if (n === 0n) return 'zero'
   if (n < 100n) return 'low'
   return 'high'
@@ -14,7 +15,7 @@ function stateChip(state: string): React.JSX.Element {
   return <span className={`status-chip ${cls}`}>{state}</span>
 }
 
-type Tab = 'offsets' | 'members'
+type Tab = 'offsets' | 'observe' | 'members'
 
 export default function GroupView(): React.JSX.Element {
   const groupDetail = useStore((s) => s.groupDetail)
@@ -31,7 +32,7 @@ export default function GroupView(): React.JSX.Element {
       </div>
     )
   }
-  if (!groupDetail || detailLoading) {
+  if (!groupDetail) {
     return (
       <div className="center">
         <div className="center-empty">
@@ -41,7 +42,10 @@ export default function GroupView(): React.JSX.Element {
     )
   }
 
-  const totalLag = groupDetail.offsets.reduce((acc, o) => acc + BigInt(o.lag), 0n)
+  const totalLag = groupDetail.offsets.reduce(
+    (acc, offset) => acc + (/^-?\d+$/.test(offset.lag) ? BigInt(offset.lag) : 0n),
+    0n
+  )
   const topics = [...new Set(groupDetail.offsets.map((o) => o.topic))]
 
   return (
@@ -53,6 +57,7 @@ export default function GroupView(): React.JSX.Element {
           {groupDetail.memberCount} member{groupDetail.memberCount === 1 ? '' : 's'} · total lag{' '}
           {totalLag.toString()}
         </span>
+        {detailLoading && <span className="spin" />}
         <span className="spacer" />
         <button
           className="btn small"
@@ -80,6 +85,9 @@ export default function GroupView(): React.JSX.Element {
       <div className="tab-row">
         <button className={`tab${tab === 'offsets' ? ' active' : ''}`} onClick={() => setTab('offsets')}>
           Offsets & Lag
+        </button>
+        <button className={`tab${tab === 'observe' ? ' active' : ''}`} onClick={() => setTab('observe')}>
+          Observe
         </button>
         <button className={`tab${tab === 'members' ? ' active' : ''}`} onClick={() => setTab('members')}>
           Members
@@ -159,6 +167,7 @@ export default function GroupView(): React.JSX.Element {
           )}
         </div>
       )}
+      {tab === 'observe' && <GroupObservability detail={groupDetail} />}
     </div>
   )
 }

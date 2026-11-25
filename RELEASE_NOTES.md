@@ -12,6 +12,26 @@ The first public macOS release of OffsetDock, a local-first Kafka operations coc
 - Explore safely with the built-in demo cluster.
 - No account, cloud relay, analytics, or telemetry.
 
+## Payload intelligence
+
+- Auto-detect and inspect JSON, XML, text, gzip, MessagePack, CBOR, BSON, and
+  structured or binary CloudEvents.
+- Decode Confluent-framed Avro, Protobuf, and JSON Schema payloads through a
+  Confluent-compatible or Apicurio Schema Registry.
+- Browse structured values, raw bytes, schemas, metadata, and field-level diffs.
+- Redact common sensitive fields by default and preserve malformed payloads as
+  lossless hex.
+
+## Explainable observability
+
+- Profile observed topic traffic by rate, payload size, wire format, trace
+  coverage, partition heat, and replication health.
+- Record a rolling local history of consumer lag while the Observe view is open.
+- Infer producer rate, consumer throughput, backlog drain, and catch-up ETA from
+  consecutive offset observations.
+- Turn every finding into an Evidence Lens card with its measurement, impact,
+  and recommended next action, without cloud telemetry or opaque scoring.
+
 ## macOS installation
 
 Apple silicon and Intel builds are available. Both are currently unsigned and not notarized. After copying OffsetDock to Applications, Control-click the app and choose **Open** on first launch.

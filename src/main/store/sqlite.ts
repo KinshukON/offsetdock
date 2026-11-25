@@ -3,7 +3,13 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import Database from 'better-sqlite3'
 import { safeStorage } from 'electron'
-import type { ClusterProfile, ClusterProfileInput, AppSettings, SaslConfig } from '@shared/types'
+import type {
+  ClusterProfile,
+  ClusterProfileInput,
+  AppSettings,
+  SaslConfig,
+  SchemaRegistryConfig
+} from '@shared/types'
 import { DEFAULT_SETTINGS, DEMO_PROFILE_NAME } from '@shared/types'
 
 let db: Database.Database | null = null
@@ -35,6 +41,14 @@ CREATE TABLE settings (
 );
 `
 
+const SCHEMA_V2 = `
+ALTER TABLE cluster_profiles ADD COLUMN schema_registry_json TEXT;
+CREATE TABLE registry_credentials (
+  profile_id TEXT PRIMARY KEY REFERENCES cluster_profiles(id) ON DELETE CASCADE,
+  encrypted_secret BLOB NOT NULL
+);
+`
+
 export function initStore(userDataDir: string): void {
   dataDir = userDataDir
   db = new Database(join(userDataDir, DB_NAME))
@@ -44,6 +58,10 @@ export function initStore(userDataDir: string): void {
   if (version < 1) {
     db.exec(SCHEMA_V1)
     db.pragma('user_version = 1')
+  }
+  if (version < 2) {
+    db.exec(SCHEMA_V2)
+    db.pragma('user_version = 2')
   }
   seedDemoProfile()
 }
@@ -80,6 +98,7 @@ interface ProfileRow {
   security_protocol: ClusterProfile['securityProtocol']
   sasl_json: string | null
   ssl_json: string | null
+  schema_registry_json: string | null
   request_timeout_ms: number
   color: ClusterProfile['color']
   is_demo: number
@@ -90,6 +109,11 @@ function rowToProfile(row: ProfileRow): ClusterProfile {
   const sasl = row.sasl_json ? (JSON.parse(row.sasl_json) as Omit<SaslConfig, 'password'>) : undefined
   const hasPassword =
     d().prepare('SELECT 1 FROM credentials WHERE profile_id = ?').get(row.id) !== undefined
+  const registry = row.schema_registry_json
+    ? (JSON.parse(row.schema_registry_json) as Omit<SchemaRegistryConfig, 'secret'>)
+    : undefined
+  const hasRegistrySecret =
+    d().prepare('SELECT 1 FROM registry_credentials WHERE profile_id = ?').get(row.id) !== undefined
   return {
     id: row.id,
     name: row.name,
@@ -97,6 +121,7 @@ function rowToProfile(row: ProfileRow): ClusterProfile {
     securityProtocol: row.security_protocol,
     sasl: sasl ? { ...sasl, hasPassword } : undefined,
     ssl: row.ssl_json ? JSON.parse(row.ssl_json) : undefined,
+    schemaRegistry: registry ? { ...registry, hasSecret: hasRegistrySecret } : undefined,
     requestTimeoutMs: row.request_timeout_ms,
     color: row.color,
     isDemo: row.is_demo === 1,
@@ -125,13 +150,20 @@ function saslForStorage(input: ClusterProfileInput): string | null {
   return JSON.stringify(rest)
 }
 
+function registryForStorage(input: ClusterProfileInput): string | null {
+  if (!input.schemaRegistry) return null
+  const { secret: _secret, ...rest } = input.schemaRegistry
+  return JSON.stringify(rest)
+}
+
 export function createProfile(input: ClusterProfileInput): ClusterProfile {
   const id = randomUUID()
   d()
     .prepare(
       `INSERT INTO cluster_profiles
-       (id, name, bootstrap_servers, security_protocol, sasl_json, ssl_json, request_timeout_ms, color, is_demo, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+       (id, name, bootstrap_servers, security_protocol, sasl_json, ssl_json, schema_registry_json,
+        request_timeout_ms, color, is_demo, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
     )
     .run(
       id,
@@ -140,11 +172,13 @@ export function createProfile(input: ClusterProfileInput): ClusterProfile {
       input.securityProtocol,
       saslForStorage(input),
       input.ssl ? JSON.stringify(input.ssl) : null,
+      registryForStorage(input),
       input.requestTimeoutMs,
       input.color,
       new Date().toISOString()
     )
   if (input.sasl?.password) setPassword(id, input.sasl.password)
+  if (input.schemaRegistry?.secret) setSchemaRegistrySecret(id, input.schemaRegistry.secret)
   return getProfile(id)
 }
 
@@ -155,7 +189,7 @@ export function updateProfile(id: string, input: ClusterProfileInput): ClusterPr
     .prepare(
       `UPDATE cluster_profiles SET
        name = ?, bootstrap_servers = ?, security_protocol = ?, sasl_json = ?, ssl_json = ?,
-       request_timeout_ms = ?, color = ? WHERE id = ?`
+       schema_registry_json = ?, request_timeout_ms = ?, color = ? WHERE id = ?`
     )
     .run(
       input.name,
@@ -163,12 +197,17 @@ export function updateProfile(id: string, input: ClusterProfileInput): ClusterPr
       input.securityProtocol,
       saslForStorage(input),
       input.ssl ? JSON.stringify(input.ssl) : null,
+      registryForStorage(input),
       input.requestTimeoutMs,
       input.color,
       id
     )
   if (input.sasl?.password) setPassword(id, input.sasl.password)
   if (!input.sasl) d().prepare('DELETE FROM credentials WHERE profile_id = ?').run(id)
+  if (input.schemaRegistry?.secret) setSchemaRegistrySecret(id, input.schemaRegistry.secret)
+  if (!input.schemaRegistry || input.schemaRegistry.auth === 'none') {
+    d().prepare('DELETE FROM registry_credentials WHERE profile_id = ?').run(id)
+  }
   return getProfile(id)
 }
 
@@ -197,6 +236,34 @@ export function getPassword(profileId: string): string | null {
   return safeStorage.isEncryptionAvailable()
     ? safeStorage.decryptString(row.encrypted_password)
     : row.encrypted_password.toString('utf8')
+}
+
+function encryptSecret(value: string): Buffer {
+  return safeStorage.isEncryptionAvailable()
+    ? safeStorage.encryptString(value)
+    : Buffer.from(value, 'utf8')
+}
+
+function decryptSecret(value: Buffer): string {
+  return safeStorage.isEncryptionAvailable()
+    ? safeStorage.decryptString(value)
+    : value.toString('utf8')
+}
+
+export function setSchemaRegistrySecret(profileId: string, secret: string): void {
+  d()
+    .prepare(
+      `INSERT INTO registry_credentials (profile_id, encrypted_secret) VALUES (?, ?)
+       ON CONFLICT(profile_id) DO UPDATE SET encrypted_secret = excluded.encrypted_secret`
+    )
+    .run(profileId, encryptSecret(secret))
+}
+
+export function getSchemaRegistrySecret(profileId: string): string | null {
+  const row = d()
+    .prepare('SELECT encrypted_secret FROM registry_credentials WHERE profile_id = ?')
+    .get(profileId) as { encrypted_secret: Buffer } | undefined
+  return row ? decryptSecret(row.encrypted_secret) : null
 }
 
 function seedDemoProfile(): void {

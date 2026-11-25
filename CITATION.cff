@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If OffsetDock helps your work, please star the repository and cite it using this metadata."
+title: "OffsetDock: a local-first Apache Kafka operations cockpit"
+type: software
+authors:
+  - family-names: Dutta
+    given-names: Kinshuk
+    affiliation: Data4AI.org
+repository-code: "https://github.com/KinshukON/offsetdock"
+url: "https://data4ai.org/openapplications/offsetdock"
+license: MIT
+version: 0.1.0
+date-released: 2026-09-10
+keywords:
+  - Apache Kafka
+  - Kafka desktop application
+  - consumer lag
+  - Schema Registry
+  - Avro
+  - Protobuf

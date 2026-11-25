@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import type { ClusterProfile, ClusterProfileInput, SaslMechanism, SecurityProtocol, TestConnectionResult } from '@shared/types'
+import type {
+  ClusterProfile,
+  ClusterProfileInput,
+  SaslMechanism,
+  SecurityProtocol,
+  TestConnectionResult
+} from '@shared/types'
 import { useStore } from '../../state/store'
 import Modal from './Modal'
 
@@ -20,6 +26,15 @@ function toInput(p: ClusterProfile): ClusterProfileInput {
     securityProtocol: p.securityProtocol,
     sasl: p.sasl ? { mechanism: p.sasl.mechanism, username: p.sasl.username, awsRegion: p.sasl.awsRegion } : undefined,
     ssl: p.ssl,
+    schemaRegistry: p.schemaRegistry
+      ? {
+          enabled: p.schemaRegistry.enabled,
+          provider: p.schemaRegistry.provider,
+          url: p.schemaRegistry.url,
+          auth: p.schemaRegistry.auth,
+          username: p.schemaRegistry.username
+        }
+      : undefined,
     requestTimeoutMs: p.requestTimeoutMs,
     color: p.color
   }
@@ -303,6 +318,129 @@ export default function ConnectionsDialog(): React.JSX.Element {
               </div>
             </>
           )}
+
+          <div className="field-group">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={form.schemaRegistry?.enabled ?? false}
+                onChange={(e) =>
+                  patch({
+                    schemaRegistry: e.target.checked
+                      ? form.schemaRegistry ?? {
+                          enabled: true,
+                          provider: 'confluent',
+                          url: 'http://localhost:8081',
+                          auth: 'none'
+                        }
+                      : undefined
+                  })
+                }
+              />
+              Decode messages with Schema Registry
+            </label>
+            {form.schemaRegistry?.enabled && (
+              <>
+                <div className="field-row">
+                  <div className="field">
+                    <label>Registry provider</label>
+                    <select
+                      className="select"
+                      value={form.schemaRegistry.provider}
+                      onChange={(e) =>
+                        patch({
+                          schemaRegistry: {
+                            ...form.schemaRegistry!,
+                            provider: e.target.value as 'confluent' | 'apicurio'
+                          }
+                        })
+                      }
+                    >
+                      <option value="confluent">Confluent-compatible</option>
+                      <option value="apicurio">Apicurio compatibility API</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Authentication</label>
+                    <select
+                      className="select"
+                      value={form.schemaRegistry.auth}
+                      onChange={(e) =>
+                        patch({
+                          schemaRegistry: {
+                            ...form.schemaRegistry!,
+                            auth: e.target.value as 'none' | 'basic' | 'bearer'
+                          }
+                        })
+                      }
+                    >
+                      <option value="none">None</option>
+                      <option value="basic">Basic</option>
+                      <option value="bearer">Bearer token</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Schema Registry URL</label>
+                  <input
+                    className="input"
+                    value={form.schemaRegistry.url}
+                    placeholder="https://schema-registry.example.com"
+                    onChange={(e) =>
+                      patch({ schemaRegistry: { ...form.schemaRegistry!, url: e.target.value } })
+                    }
+                  />
+                </div>
+                {form.schemaRegistry.auth === 'basic' && (
+                  <div className="field-row">
+                    <div className="field">
+                      <label>Registry username</label>
+                      <input
+                        className="input"
+                        value={form.schemaRegistry.username ?? ''}
+                        onChange={(e) =>
+                          patch({
+                            schemaRegistry: { ...form.schemaRegistry!, username: e.target.value }
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Registry password {editingId ? '(leave blank to keep saved)' : ''}</label>
+                      <input
+                        className="input"
+                        type="password"
+                        value={form.schemaRegistry.secret ?? ''}
+                        onChange={(e) =>
+                          patch({ schemaRegistry: { ...form.schemaRegistry!, secret: e.target.value } })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+                {form.schemaRegistry.auth === 'bearer' && (
+                  <div className="field">
+                    <label>Bearer token {editingId ? '(leave blank to keep saved)' : ''}</label>
+                    <input
+                      className="input"
+                      type="password"
+                      value={form.schemaRegistry.secret ?? ''}
+                      onChange={(e) =>
+                        patch({ schemaRegistry: { ...form.schemaRegistry!, secret: e.target.value } })
+                      }
+                    />
+                  </div>
+                )}
+                <div className="secure-note">
+                  <span className="lock" aria-hidden>🔒</span>
+                  <span>
+                    Registry credentials are encrypted with the operating system keychain. Schema IDs and
+                    schemas are cached in memory only while the app is running.
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="secure-note">
             <span className="lock" aria-hidden>

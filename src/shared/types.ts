@@ -21,6 +21,19 @@ export interface SslConfig {
   keyPath?: string
 }
 
+export type SchemaRegistryProvider = 'confluent' | 'apicurio'
+export type SchemaRegistryAuth = 'none' | 'basic' | 'bearer'
+
+export interface SchemaRegistryConfig {
+  enabled: boolean
+  provider: SchemaRegistryProvider
+  url: string
+  auth: SchemaRegistryAuth
+  username?: string
+  /** Present only on input. Secrets are encrypted before persistence. */
+  secret?: string
+}
+
 export interface ClusterProfileInput {
   name: string
   /** comma-separated host:port list */
@@ -28,6 +41,7 @@ export interface ClusterProfileInput {
   securityProtocol: SecurityProtocol
   sasl?: SaslConfig
   ssl?: SslConfig
+  schemaRegistry?: SchemaRegistryConfig
   requestTimeoutMs: number
   color: 'none' | 'blue' | 'amber' | 'red'
 }
@@ -36,7 +50,54 @@ export interface ClusterProfile extends Omit<ClusterProfileInput, 'sasl'> {
   id: string
   isDemo: boolean
   sasl?: Omit<SaslConfig, 'password'> & { hasPassword: boolean }
+  schemaRegistry?: Omit<SchemaRegistryConfig, 'secret'> & { hasSecret: boolean }
   createdAt: string
+}
+
+export type DecodeFormat =
+  | 'auto'
+  | 'json'
+  | 'xml'
+  | 'text'
+  | 'hex'
+  | 'avro'
+  | 'protobuf'
+  | 'json-schema'
+  | 'messagepack'
+  | 'cbor'
+  | 'bson'
+  | 'gzip'
+
+export type DetectedFormat = Exclude<DecodeFormat, 'auto'> | 'cloudevents' | 'binary'
+
+export interface DecodeMessageRequest {
+  profileId: string
+  topic: string
+  contentBase64: string | null
+  headers: MessageHeader[]
+  requestedFormat?: DecodeFormat
+  /** Defaults to true for structured output. Raw bytes remain untouched. */
+  redactSensitive?: boolean
+}
+
+export interface DecodedSchema {
+  id?: number
+  type: 'AVRO' | 'PROTOBUF' | 'JSON' | 'UNKNOWN'
+  source: 'schema-registry' | 'embedded' | 'inferred'
+  text?: string
+  references?: { name: string; subject: string; version: number }[]
+}
+
+export interface DecodedPayload {
+  format: DetectedFormat
+  status: 'decoded' | 'raw' | 'error'
+  /** Human-readable representation, normally pretty JSON. */
+  text: string
+  /** JSON-compatible decoded value for structured rendering. */
+  value?: unknown
+  schema?: DecodedSchema
+  metadata: Record<string, string | number | boolean>
+  diagnostics: string[]
 }
 
 export interface TestConnectionResult {
