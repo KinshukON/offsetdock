@@ -135,6 +135,20 @@ Kafka-compatible services.
   timestamp; per partition or whole-topic. Guarded so it only runs when the
   group is idle.
 
+### Observe and diagnose
+- **Topic telemetry** — derive observed event rate, payload percentiles,
+  wire-format mix, trace-context coverage, partition skew, and replication
+  health from the record sample and Kafka metadata already in the app.
+- **Consumer flight recorder** — keep a rolling five-minute, in-memory history
+  of lag and log-end movement while the Observe tab is open.
+- **Causal rate model** — infer producer input rate, consumer processing rate,
+  net backlog drain, and catch-up ETA instead of treating lag as an isolated
+  number.
+- **Evidence Lens** — each signal includes the measured evidence, why it
+  matters, and a concrete next action. There is no opaque health score.
+- **Private by design** — observations remain local to the current session and
+  are neither uploaded nor persisted.
+
 ### Produce & administer
 - **Produce** — keyed or keyless messages, tombstones, custom headers, and
   repeat-N for generating test data.

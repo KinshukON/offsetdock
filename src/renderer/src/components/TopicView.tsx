@@ -3,8 +3,9 @@ import { useStore } from '../state/store'
 import MessagesTab from './MessagesTab'
 import PartitionsTab from './PartitionsTab'
 import ConfigsTab from './ConfigsTab'
+import TopicObservability from './TopicObservability'
 
-type Tab = 'messages' | 'partitions' | 'configs'
+type Tab = 'messages' | 'observe' | 'partitions' | 'configs'
 
 export default function TopicView(): React.JSX.Element {
   const selection = useStore((s) => s.selection)
@@ -49,7 +50,7 @@ export default function TopicView(): React.JSX.Element {
         </button>
       </div>
       <div className="tab-row">
-        {(['messages', 'partitions', 'configs'] as const).map((t) => (
+        {(['messages', 'observe', 'partitions', 'configs'] as const).map((t) => (
           <button key={t} className={`tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
             {t[0].toUpperCase() + t.slice(1)}
           </button>
@@ -57,6 +58,7 @@ export default function TopicView(): React.JSX.Element {
       </div>
       {detailError && <div className="error-box">{detailError}</div>}
       {tab === 'messages' && <MessagesTab />}
+      {tab === 'observe' && <TopicObservability />}
       {tab === 'partitions' && <PartitionsTab />}
       {tab === 'configs' && <ConfigsTab />}
     </div>
