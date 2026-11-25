@@ -1437,10 +1437,43 @@ textarea {
 .observe-trend i { flex: 1; min-width: 4px; max-width: 28px; background: linear-gradient(var(--accent-hover), var(--accent)); border-radius: 3px 3px 0 0; }
 .observe-timeline-labels { display: flex; justify-content: space-between; color: var(--fg-faint); font: 9px var(--font-mono); padding-top: 4px; }
 .observe-footnote { margin: -3px 2px 6px; color: var(--fg-faint); font-size: 10px; text-align: center; }
+.time-machine { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: linear-gradient(155deg, color-mix(in srgb, var(--accent) 7%, var(--bg-subtle)), var(--bg-subtle) 44%); }
+.time-machine-explanation { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 13px; background: var(--bg); margin-bottom: 14px; }
+.time-machine-explanation.healthy { border-left-color: var(--success); }
+.time-machine-explanation.warning { border-left-color: var(--warn); }
+.time-machine-explanation.critical { border-left-color: var(--danger); }
+.time-machine-heading { display: flex; align-items: center; gap: 8px; }
+.time-machine-heading strong { font-size: 12.5px; }
+.time-machine-heading > span:last-child { margin-left: auto; color: var(--fg-faint); font: 600 9px var(--font-mono); text-transform: uppercase; }
+.time-machine-explanation.healthy .observe-signal-dot { color: var(--success); }
+.time-machine-explanation.warning .observe-signal-dot { color: var(--warn); }
+.time-machine-explanation.critical .observe-signal-dot { color: var(--danger); }
+.time-machine-explanation p { color: var(--fg-muted); font-size: 11.5px; margin: 7px 0; }
+.time-machine-explanation ul { margin: 7px 0 0 17px; padding: 0; color: var(--fg-faint); font-size: 10.5px; line-height: 1.55; }
+.time-machine-scrubber { border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; background: var(--bg); margin-bottom: 14px; }
+.time-machine-scrubber-label { display: flex; justify-content: space-between; color: var(--fg-muted); font-size: 10.5px; }
+.time-machine-scrubber-label b { font: 500 10px var(--font-mono); color: var(--fg-faint); }
+.time-machine-scrubber input[type='range'], .time-machine-controls input[type='range'] { width: 100%; accent-color: var(--accent); }
+.time-machine-state { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 7px; }
+.time-machine-state span { min-width: 0; border-left: 1px solid var(--border); padding-left: 9px; }
+.time-machine-state span:first-child { border-left: 0; padding-left: 0; }
+.time-machine-state small { display: block; color: var(--fg-faint); font-size: 9px; text-transform: uppercase; }
+.time-machine-state b { display: block; color: var(--fg); font: 600 12px var(--font-mono); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+.time-machine-simulator { display: grid; grid-template-columns: minmax(230px, .72fr) minmax(360px, 1.28fr); gap: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+.time-machine-controls label { display: block; margin-top: 10px; }
+.time-machine-controls label span { display: flex; justify-content: space-between; color: var(--fg-muted); font-size: 10.5px; }
+.time-machine-controls label b { color: var(--fg); font-family: var(--font-mono); }
+.time-machine-projection .observe-metrics { grid-template-columns: repeat(3, minmax(100px, 1fr)); }
+.time-machine-projection .observe-metric strong { font-size: 15px; }
+.time-machine-verdict { margin: 9px 0 0; border: 1px solid color-mix(in srgb, var(--success) 45%, var(--border)); border-radius: 7px; padding: 9px 10px; color: var(--fg-muted); background: color-mix(in srgb, var(--success) 7%, var(--bg)); font-size: 11px; line-height: 1.45; }
+.time-machine-verdict.critical { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); background: color-mix(in srgb, var(--danger) 7%, var(--bg)); }
 @media (max-width: 900px) {
   .observe-metrics { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
   .observe-columns { grid-template-columns: 1fr; }
   .observe-signal dl { grid-template-columns: 1fr; gap: 7px; }
+  .time-machine-simulator { grid-template-columns: 1fr; }
+  .time-machine-projection .observe-metrics { grid-template-columns: repeat(2, minmax(110px, 1fr)); }
+  .time-machine-state { grid-template-columns: repeat(2, 1fr); }
 }
 
 .spin {

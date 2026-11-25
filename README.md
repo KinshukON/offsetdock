@@ -139,15 +139,22 @@ Kafka-compatible services.
 - **Topic telemetry** — derive observed event rate, payload percentiles,
   wire-format mix, trace-context coverage, partition skew, and replication
   health from the record sample and Kafka metadata already in the app.
-- **Consumer flight recorder** — keep a rolling five-minute, in-memory history
-  of lag and log-end movement while the Observe tab is open.
+- **Consumer flight recorder** — retain up to 180 privacy-safe snapshots of
+  lag, log-end movement, group state, and membership on the local device.
 - **Causal rate model** — infer producer input rate, consumer processing rate,
   net backlog drain, and catch-up ETA instead of treating lag as an isolated
   number.
+- **OffsetDock Time Machine** — scrub through recorded group states, connect
+  changes in lag, traffic, membership, and partition concentration using
+  explicit evidence, then test counterfactual recovery plans without issuing
+  commands to Kafka.
+- **Recovery simulator** — model consumer count, per-consumer throughput, and
+  incoming traffic; respect partition assignment limits and estimate whether
+  and when a backlog would clear.
 - **Evidence Lens** — each signal includes the measured evidence, why it
   matters, and a concrete next action. There is no opaque health score.
-- **Private by design** — observations remain local to the current session and
-  are neither uploaded nor persisted.
+- **Private by design** — only operational metadata is retained locally for the
+  Time Machine. Payloads and credentials are never recorded or uploaded.
 
 ### Produce & administer
 - **Produce** — keyed or keyless messages, tombstones, custom headers, and

@@ -1,26 +1,42 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ConsumerGroupDetail } from '@shared/types'
-import { groupSnapshot, observeGroup, type GroupSnapshot } from '../lib/observability'
+import { observeGroup } from '../lib/observability'
+import {
+  appendFlightSnapshot, flightSnapshot, flightStorageKey, loadFlightHistory,
+  saveFlightHistory, type FlightSnapshot
+} from '../lib/timeMachine'
 import { useStore } from '../state/store'
 import { EvidenceLens, formatCount, MetricCard } from './Observability'
+import TimeMachinePanel from './TimeMachinePanel'
 
 const POLL_MS = 10_000
-const MAX_SNAPSHOTS = 30
 
 export default function GroupObservability({ detail }: { detail: ConsumerGroupDetail }): React.JSX.Element {
   const refreshSelection = useStore((state) => state.refreshSelection)
   const detailLoading = useStore((state) => state.detailLoading)
-  const [history, setHistory] = useState<GroupSnapshot[]>(() => [groupSnapshot(detail)])
+  const activeProfileId = useStore((state) => state.activeProfileId)
+  const storageKey = useMemo(
+    () => flightStorageKey(activeProfileId ?? 'unknown', detail.groupId),
+    [activeProfileId, detail.groupId]
+  )
+  const [history, setHistory] = useState<FlightSnapshot[]>([])
   const [recording, setRecording] = useState(true)
 
   useEffect(() => {
-    const snapshot = groupSnapshot(detail)
+    const loaded = loadFlightHistory(window.localStorage, storageKey)
+    const next = appendFlightSnapshot(loaded, flightSnapshot(detail))
+    saveFlightHistory(window.localStorage, storageKey, next)
+    setHistory(next)
+  }, [storageKey])
+
+  useEffect(() => {
+    const snapshot = flightSnapshot(detail)
     setHistory((current) => {
-      const latest = current.at(-1)
-      if (latest && snapshot.capturedAt - latest.capturedAt < 1_000) return current
-      return [...current, snapshot].slice(-MAX_SNAPSHOTS)
+      const next = appendFlightSnapshot(current, snapshot)
+      if (next !== current) saveFlightHistory(window.localStorage, storageKey, next)
+      return next
     })
-  }, [detail])
+  }, [detail, storageKey])
 
   useEffect(() => {
     if (!recording) return
@@ -45,7 +61,7 @@ export default function GroupObservability({ detail }: { detail: ConsumerGroupDe
         <div>
           <span className="observe-eyebrow">CONSUMER FLIGHT RECORDER</span>
           <h3>Is this group keeping up?</h3>
-          <p>A short, in-memory lag history separates a backlog snapshot from a worsening trend. It is discarded when you leave this view.</p>
+          <p>A local lag history separates a backlog snapshot from a worsening trend and survives navigation. Payloads are never recorded.</p>
         </div>
         <button className={`btn small${recording ? '' : ' ghost'}`} onClick={() => setRecording((value) => !value)}>
           <span className={`observe-live-dot${recording ? ' active' : ''}`} />
@@ -65,7 +81,7 @@ export default function GroupObservability({ detail }: { detail: ConsumerGroupDe
 
       <section className="observe-section observe-recorder">
         <div className="observe-section-title">
-          <div><h3>Lag timeline</h3><p>Total lag across up to five minutes of local observations.</p></div>
+          <div><h3>Lag timeline</h3><p>Recent local observations retained by OffsetDock Time Machine.</p></div>
           <span className="observe-ratio">{trend}</span>
         </div>
         <div className="observe-trend" aria-label="Recent total lag observations">
@@ -76,8 +92,9 @@ export default function GroupObservability({ detail }: { detail: ConsumerGroupDe
         </div>
         <div className="observe-timeline-labels"><span>older</span><span>now</span></div>
       </section>
+      <TimeMachinePanel detail={detail} history={history} observation={observation} />
       <EvidenceLens signals={observation.signals} />
-      <p className="observe-footnote">Evidence Lens uses transparent rules, not an opaque health score. No observations are uploaded or persisted.</p>
+      <p className="observe-footnote">Evidence Lens uses transparent rules, not an opaque health score. Only offset metadata is retained locally, and nothing is uploaded.</p>
     </div>
   )
 }
