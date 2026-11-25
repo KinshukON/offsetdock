@@ -98,7 +98,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - name: Build Linux x64 packages
-        run: npm run build:linux -- AppImage deb --x64
+        run: npm run build:linux -- --x64
       - uses: actions/upload-artifact@v7
         with:
           name: installers-linux-x64
@@ -121,7 +121,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - name: Build Linux ARM64 AppImage
-        run: npm run build:linux -- AppImage --arm64
+        run: npm run build:linux -- --arm64
       - uses: actions/upload-artifact@v7
         with:
           name: installers-linux-arm64

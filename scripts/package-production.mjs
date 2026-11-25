@@ -7,7 +7,11 @@ import { spawnSync } from 'node:child_process'
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const projectDir = resolve(scriptDir, '..')
 const stageDir = await mkdtemp(join(tmpdir(), 'offsetdock-package-'))
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+const npmCli = process.env.npm_execpath
+
+if (!npmCli) {
+  throw new Error('npm_execpath is unavailable; run this packager through an npm script')
+}
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, stdio: 'inherit', env: process.env })
@@ -17,8 +21,12 @@ function run(command, args, cwd) {
   }
 }
 
+function runNpm(args, cwd) {
+  run(process.execPath, [npmCli, ...args], cwd)
+}
+
 try {
-  run(npmCommand, ['run', 'build'], projectDir)
+  runNpm(['run', 'build'], projectDir)
 
   await Promise.all([
     cp(join(projectDir, 'out'), join(stageDir, 'out'), { recursive: true }),
@@ -28,11 +36,7 @@ try {
     cp(join(projectDir, 'electron-builder.yml'), join(stageDir, 'electron-builder.yml'))
   ])
 
-  run(
-    npmCommand,
-    ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
-    stageDir
-  )
+  runNpm(['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], stageDir)
 
   const electronPackage = JSON.parse(
     await readFile(join(projectDir, 'node_modules', 'electron', 'package.json'), 'utf8')
