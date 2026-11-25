@@ -1,6 +1,8 @@
-# OffsetDock 0.1.0
+# OffsetDock 0.1.1
 
-The first public macOS release of OffsetDock, a local-first Kafka operations cockpit by Data4AI.
+OffsetDock 0.1.1 adds rich payload intelligence, explainable local
+observability, and signed cross-platform release automation to the local-first
+Kafka operations cockpit by Data4AI.
 
 ## Highlights
 
