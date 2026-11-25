@@ -2,10 +2,13 @@ import { BrowserWindow, ipcMain } from 'electron'
 import type { IpcApi, IpcChannel, IpcResult } from '@shared/ipc'
 import { exportMessages, importMessages, saveToFile } from './fileTransfer'
 import { disconnect, disconnectAll, getAdapter, testConnection } from './kafka/manager'
+import { decodeMessage } from './decoding/decoder'
 import {
   createProfile,
   deleteProfile,
   getAppSettings,
+  getProfile,
+  getSchemaRegistrySecret,
   listProfiles,
   resetStore,
   setAppSettings,
@@ -31,7 +34,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
   // --- cluster profiles ---
   handle('profiles:list', () => listProfiles())
   handle('profiles:create', (input) => createProfile(input))
-  handle('profiles:update', (id, input) => updateProfile(id, input))
+  handle('profiles:update', async (id, input) => {
+    // A profile's broker, TLS, SASL, or registry settings may have changed.
+    // Never leave an adapter connected with stale settings under the same ID.
+    await disconnect(id)
+    return updateProfile(id, input)
+  })
   handle('profiles:delete', async (id) => {
     await disconnect(id)
     deleteProfile(id)
@@ -58,6 +66,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
 
   // --- messages ---
   handle('messages:fetch', async (req) => (await getAdapter(req.profileId)).fetchMessages(req))
+  handle('messages:decode', (req) =>
+    decodeMessage(req, {
+      profile: getProfile(req.profileId),
+      registrySecret: getSchemaRegistrySecret(req.profileId)
+    })
+  )
   handle('messages:produce', async (req) => (await getAdapter(req.profileId)).produce(req))
   handle('messages:saveToFile', (suggestedName, contentBase64) =>
     saveToFile(getWindow(), suggestedName, contentBase64)

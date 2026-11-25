@@ -33,9 +33,32 @@ watch consumer lag, and reset offsets safely. Free and open source.
 
 [Visit Website](https://data4ai.org/openapplications/offsetdock?utm_source=github&utm_medium=readme&utm_campaign=offsetdock) · [Download](#download) · [Features](#features) · [Quick start](#quick-start) · [Contributing](#contributing)
 
-<img src="docs/images/messages.png" alt="Browsing messages with the payload inspector" width="900" />
+<img src="docs/images/messages-watermarked.png" alt="Browsing messages with the payload inspector" width="900" />
 
 </div>
+
+---
+
+## Like OffsetDock? Help it travel
+
+OffsetDock is free to use, modify, and share under the MIT License. If it helps
+you, please:
+
+- [**Star the GitHub repository**](https://github.com/KinshukON/offsetdock) so
+  more Kafka users can discover it.
+- **Cite and link this repository** in articles, demos, presentations, videos,
+  derivative projects, and technical documentation. GitHub exposes a ready-made
+  citation from [`CITATION.cff`](CITATION.cff).
+- **Keep the copyright and MIT permission notice** when redistributing the
+  software or substantial portions of its source, as required by the license.
+- Preserve the Data4AI.org · OffsetDock watermark on published project
+  screenshots, or otherwise credit OffsetDock with a visible repository link.
+- Open an issue, suggest an improvement, or contribute a pull request.
+
+Suggested citation:
+
+> Kinshuk Dutta and Data4AI.org. *OffsetDock: a local-first Apache Kafka
+> operations cockpit*. https://github.com/KinshukON/offsetdock
 
 ---
 
@@ -92,13 +115,19 @@ Kafka-compatible services.
   time; per partition or across all of them.
 - **Fast grid** — virtualized, handles thousands of rows without breaking a sweat.
 - **Powerful filters** — `contains`, `regex`, or `JSONPath` across key, value and headers.
-- **Readable payloads** — auto pretty-printed JSON/XML, plus raw text and hex
-  views, rendered by the Monaco (VS Code) editor. Headers, byte sizes, and
-  tombstones all shown.
+- **Rich payload inspector** — auto-detect JSON, XML, text, gzip, MessagePack,
+  CBOR, BSON, CloudEvents, and Confluent-framed Avro, Protobuf, or JSON Schema.
+  Explore collapsible structured values, raw bytes, schemas, metadata, and
+  field-level diffs without losing the original payload.
+- **Schema Registry** — optional Confluent-compatible or Apicurio endpoints,
+  with schema/reference caching, Basic or bearer authentication, and local
+  keychain-backed secrets. JSON Schema payloads are validated as they decode.
+- **Safe inspection** — common secret fields are redacted by default, malformed
+  payloads fall back to lossless hex, and decode size limits protect the UI.
 - **Export** — send results to JSON or CSV, or save a single key/value to disk.
 
 ### Fix consumers
-<img src="docs/images/consumer-lag.png" alt="Consumer group lag view" width="820" />
+<img src="docs/images/consumer-lag-watermarked.png" alt="Consumer group lag view" width="820" />
 
 - **Lag at a glance** — per-partition start / end / committed offsets with
   colour-coded lag, plus group state, members and partition assignments.
@@ -120,9 +149,10 @@ Kafka-compatible services.
   background process — they never reach the UI layer.
 - **No phoning home** — nothing is sent to any external service; no telemetry,
   no analytics, no update pings, no IP or geolocation lookups. The app makes
-  **no outbound connections except to the brokers you configure** (plus AWS STS
-  if you opt into MSK IAM). The time-of-day greeting on the welcome screen comes
-  from your system clock alone — no weather or location API.
+  **no outbound connections except to the brokers and Schema Registry endpoints
+  you configure** (plus AWS STS if you opt into MSK IAM). The time-of-day
+  greeting on the welcome screen comes from your system clock alone, with no
+  weather or location API.
 - **Reset** — wipe every connection, credential and setting from Help → Reset.
 - **Found a vulnerability?** See [SECURITY.md](SECURITY.md) — please report privately.
 
@@ -132,7 +162,7 @@ Install from [Releases](../../releases), open the app, and pick **Explore the
 demo cluster** on the welcome screen — no Kafka required. When you're ready,
 add a connection via **Connections → + New connection**.
 
-<img src="docs/images/welcome.png" alt="Welcome screen with demo cluster option" width="700" />
+<img src="docs/images/welcome-watermarked.png" alt="Welcome screen with demo cluster option" width="700" />
 
 ## How it works
 
@@ -231,8 +261,8 @@ OffsetDock speaks the **Kafka protocol** only. Kafka-API-compatible
 brokers (e.g. Redpanda) should work, but Google Pub/Sub, RabbitMQ and friends
 are out of scope — their models have no partitions or offsets to explore.
 
-Ideas and PRs for Schema Registry / Avro decoding, saved queries, and Linux
-packaging are very welcome.
+Ideas and PRs for saved queries, custom decoder plugins, and additional
+packaging targets are very welcome.
 
 ## FAQ
 

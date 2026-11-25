@@ -11,6 +11,8 @@ import type {
   ExportResult,
   FetchMessagesRequest,
   FetchMessagesResult,
+  DecodeMessageRequest,
+  DecodedPayload,
   ImportMessagesRequest,
   ImportResult,
   ProduceRequest,
@@ -42,6 +44,7 @@ export interface IpcApi {
   'cluster:groupDetail': (profileId: string, groupId: string) => ConsumerGroupDetail
 
   'messages:fetch': (req: FetchMessagesRequest) => FetchMessagesResult
+  'messages:decode': (req: DecodeMessageRequest) => DecodedPayload
   'messages:produce': (req: ProduceRequest) => ProduceResult
   'messages:saveToFile': (suggestedName: string, contentBase64: string) => string | null
   'messages:export': (req: ExportMessagesRequest) => ExportResult
